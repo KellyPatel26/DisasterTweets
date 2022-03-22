@@ -18,9 +18,9 @@ Processed data looks like this:
 
 
 ## Split into training and testing texts, and training and testing labels.
-- X_train (4906,) of training text
-- Y_train (4906,) of training labels
-- X_test (1636,) of testing text
-- Y_test (1636,) of testing labels
+- X_train (4906,) of training text (contains a string of processed text)
+- Y_train (4906,) of training labels (either 0, not disaster or 1, disaster)
+- X_test (1636,) of testing text (contains a string of processed text)
+- Y_test (1636,) of testing labels (either 0, not disaster or 1, disaster)
 
 For LSTM Model, I also tokenized the inputs in the main function if you decide you need them.
