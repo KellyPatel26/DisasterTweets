@@ -13,6 +13,7 @@ Steps for preprocessing:
 4. removed emojis, punctuation, symbols
 
 Processed data looks like this:
+
 ![Unprocessed Data](imgs/processeddata.PNG)
 
 
