@@ -4,6 +4,8 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 from gym import make
 import numpy as np
 import tensorflow as tf
+from datetime import datetime
+import matplotlib.pyplot as plt
 
 
 ### I need to modify the follwing code 
@@ -104,7 +106,7 @@ def train(model, X_token, y_train):
 	
 	iteration=int(tf.math.floor(len(y_train)/model.batch_size))
 	# inputMod=len(train_french)%model.batch_size
-    
+	losses = []
 	for iter in range(iteration):		
 		batchedInput=X_token[iter*model.batch_size:(iter+1)*model.batch_size]
 		batchedLabel=y_train[iter*model.batch_size:(iter+1)*model.batch_size]
@@ -112,11 +114,12 @@ def train(model, X_token, y_train):
 		with tf.GradientTape() as tape:
 			batchedProbs=model.call(batchedInput)
 			loss=model.loss_function(batchedProbs,batchedLabel)
+			losses.append(loss)
 			print('The model is calculating the loss', loss)
 		Grad=tape.gradient(loss,model.trainable_variables)
 		model.optimizer.apply_gradients(zip(Grad,model.trainable_variables))
-
-	pass
+	return losses
+	
 
 
 def test(model, test_token, y_test):
@@ -152,17 +155,32 @@ def main():
 	test_token = tokenizer.texts_to_sequences(X_test.values)
 	test_token = pad_sequences(test_token)
 	# print(tokenizer.sequences_to_texts([X_token[0]]))
-
 	window_size=20
 	model=LSTM_Seq2Dis(window_size,len(X_token))
-	train(model,X_token,y_train)
+	train_losses = train(model,X_token,y_train)
+	train_iters = np.arange(len(train_losses))
+
 	perplexity=test(model,test_token,y_test)
 	prbs=model.call(test_token)
 	acc=model.accuracy_function(prbs,y_test)
 	print("Perplexity:", perplexity)
 	print("Accuracy:", acc)
 
+
+ 
+	# plotting the points
+	plt.plot(train_iters, train_losses)
 	
+	# naming the x axis
+	plt.xlabel('Iterations')
+	# naming the y axis
+	plt.ylabel('Training Loss')
+	
+	# giving a title to my graph
+	plt.title('Training Loss')
+	
+	# function to show the plot
+	plt.show()
 
 
 	
