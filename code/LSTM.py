@@ -13,7 +13,7 @@ class LSTM_Seq2Dis(tf.keras.Model):
 		###### DO NOT CHANGE ##############
 		super(LSTM_Seq2Dis, self).__init__()
 		self.vocab_size = vocab_size 
-		self.french_window_size = window_size 
+		self.window_size = window_size 
 		######^^^ DO NOT CHANGE ^^^##################
 		def make_vars(*dim,initializer=tf.random.normal):
 			return tf.Variable(initializer(dim,stddev=0.1))
@@ -33,25 +33,29 @@ class LSTM_Seq2Dis(tf.keras.Model):
 		self.lstmdis=tf.keras.layers.LSTM(self.RNN,return_sequences=True,return_state=True,recurrent_dropout=0.3)
 		self.drop=tf.keras.layers.Dropout(self.dropRate)
 		# first type of dense
-		self.denseTypeOne=tf.keras.layers.Dense(self.vocab_size,activation='relu')
+		self.denseTypeOne=tf.keras.layers.Dense(self.embedding_size,activation='relu')
 		# second type of dense
-		self.denseTypeTwo=tf.keras.layers.Dense(self.vocab_size,activation='sigmoid')
+		self.denseTypeTwo=tf.keras.layers.Dense(1,activation='softmax')
 		# max pooling
-		self.maxpool=tf.keras.layers.MaxPool1D()
+		# self.maxpool=tf.keras.layers.MaxPool1D()
 		self.optimizer=tf.keras.optimizers.Adam(self.learning_rate)
 
 	@tf.function
 	def call(self, batched_input):
+		print('batched_input.shape',batched_input.shape)
 
 		embededSentence=tf.nn.embedding_lookup(self.embeddingVocab,batched_input)
 		sentence_output, final_memory_state,final_carry_state=self.lstmdis(embededSentence,None)
-		# which one to pool?
-		poolingRe=self.maxpool(sentence_output)
-		denseOne=self.denseTypeOne(poolingRe)
-		dropOne=self.drop(denseOne,training=True)
-		denseTwo=self.denseTypeOne(dropOne)
-		dropTwo=self.drop(denseTwo,training=True)
-		prbs=self.denseTypeTwo(dropTwo)		
+		# poolingRe=self.maxpool(sentence_output)
+		print('sentence_output.shape',sentence_output.shape)
+		denseOne=self.denseTypeOne(sentence_output)
+		print('denseOne.shape',denseOne.shape)
+		# dropOne=self.drop(denseOne,training=True)
+		denseTwo=self.denseTypeOne(denseOne)
+		print('denseTwo.shape',denseTwo.shape)
+		# dropTwo=self.drop(denseTwo,training=True)
+		prbs=self.denseTypeTwo(denseTwo)
+		print('prbs.shape',prbs.shape)		
 		return prbs
 
 	def accuracy_function(self, prbs, labels):
@@ -80,7 +84,10 @@ class LSTM_Seq2Dis(tf.keras.Model):
 		:param mask:  tensor that acts as a padding mask [batch_size x window_size]
 		:return: the loss of the model as a tensor
 		"""
+		print('prbs.shape',prbs.shape)
 		lossTensor=tf.keras.losses.sparse_categorical_crossentropy(labels,prbs)
+		print(lossTensor)
+		print('lossTensor.shape',tf.shape(lossTensor))
 		loss=tf.math.reduce_sum(lossTensor) 	
 
 
@@ -91,12 +98,12 @@ class LSTM_Seq2Dis(tf.keras.Model):
 
 def train(model, X_token, y_train):
 	
-	iteration=int(tf.math.floor(len(y_train)//model.batch_size))
+	iteration=int(tf.math.floor(len(y_train)/model.batch_size))
 	# inputMod=len(train_french)%model.batch_size
     
 	for iter in range(iteration):		
-		batchedInput=X_token[iter*model.batch_size:(iter+1)*model.batch_size,:]
-		batchedLabel=y_train[iter*model.batch_size:(iter+1)*model.batch_size,:]
+		batchedInput=X_token[iter*model.batch_size:(iter+1)*model.batch_size]
+		batchedLabel=y_train[iter*model.batch_size:(iter+1)*model.batch_size]
 		
 		with tf.GradientTape() as tape:
 			batchedProbs=model.call(batchedInput)
