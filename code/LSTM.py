@@ -30,32 +30,36 @@ class LSTM_Seq2Dis(tf.keras.Model):
 
 		# 2) Define embeddings, encoder, decoder, and feed forward layers
 		self.embeddingVocab=make_vars(self.vocab_size, self.embedding_size)
+
+		
+
 		self.lstmdis=tf.keras.layers.LSTM(self.RNN,return_sequences=True,return_state=True,recurrent_dropout=0.3)
 		self.drop=tf.keras.layers.Dropout(self.dropRate)
 		# first type of dense
 		self.denseTypeOne=tf.keras.layers.Dense(self.embedding_size,activation='relu')
 		# second type of dense
-		self.denseTypeTwo=tf.keras.layers.Dense(1,activation='softmax')
+		self.denseTypeTwo=tf.keras.layers.Dense(1,activation='sigmoid')
 		# max pooling
-		# self.maxpool=tf.keras.layers.MaxPool1D()
+		self.maxpool=tf.keras.layers.MaxPool1D()
 		self.optimizer=tf.keras.optimizers.Adam(self.learning_rate)
 
 	@tf.function
 	def call(self, batched_input):
-		print('batched_input.shape',batched_input.shape)
-
+		# print('batched_input.shape',batched_input.shape)
+		
 		embededSentence=tf.nn.embedding_lookup(self.embeddingVocab,batched_input)
 		sentence_output, final_memory_state,final_carry_state=self.lstmdis(embededSentence,None)
 		# poolingRe=self.maxpool(sentence_output)
-		print('sentence_output.shape',sentence_output.shape)
+		# print('sentence_output.shape',sentence_output.shape)
 		denseOne=self.denseTypeOne(sentence_output)
-		print('denseOne.shape',denseOne.shape)
+		# print('denseOne.shape',denseOne.shape)
 		# dropOne=self.drop(denseOne,training=True)
 		denseTwo=self.denseTypeOne(denseOne)
-		print('denseTwo.shape',denseTwo.shape)
+		# print('denseTwo.shape',denseTwo.shape)
 		# dropTwo=self.drop(denseTwo,training=True)
 		prbs=self.denseTypeTwo(denseTwo)
-		print('prbs.shape',prbs.shape)		
+		prbs = tf.keras.layers.Flatten()(prbs)
+		# print('prbs.shape',prbs.shape)		
 		return prbs
 
 	def accuracy_function(self, prbs, labels):
@@ -68,8 +72,8 @@ class LSTM_Seq2Dis(tf.keras.Model):
 		:param mask:  tensor that acts as a padding mask [batch_size x window_size]
 		:return: scalar tensor of accuracy of the batch between 0 and 1
 		"""
-
-		decoded_symbols = tf.argmax(input=prbs, axis=2)
+		print(tf.shape(prbs), tf.shape(labels))
+		decoded_symbols = tf.argmax(input=prbs, axis=1)
 		accuracy = tf.reduce_mean(tf.cast(tf.equal(decoded_symbols, labels), dtype=tf.float32))
 		return accuracy
 
@@ -84,10 +88,10 @@ class LSTM_Seq2Dis(tf.keras.Model):
 		:param mask:  tensor that acts as a padding mask [batch_size x window_size]
 		:return: the loss of the model as a tensor
 		"""
-		print('prbs.shape',prbs.shape)
+		# print('prbs.shape',prbs.shape)
 		lossTensor=tf.keras.losses.sparse_categorical_crossentropy(labels,prbs)
-		print(lossTensor)
-		print('lossTensor.shape',tf.shape(lossTensor))
+		# print(lossTensor)
+		# print('lossTensor.shape',tf.shape(lossTensor))
 		loss=tf.math.reduce_sum(lossTensor) 	
 
 
@@ -108,9 +112,8 @@ def train(model, X_token, y_train):
 		with tf.GradientTape() as tape:
 			batchedProbs=model.call(batchedInput)
 			loss=model.loss_function(batchedProbs,batchedLabel)
-			print('The model is calculating the loss')
+			print('The model is calculating the loss', loss)
 		Grad=tape.gradient(loss,model.trainable_variables)
-		print('The model is calculating the Grad')
 		model.optimizer.apply_gradients(zip(Grad,model.trainable_variables))
 
 	pass
@@ -124,12 +127,11 @@ def test(model, test_token, y_test):
 	for iter in range(iteration):
 		batchedInput=test_token[iter*model.batch_size:(iter+1)*model.batch_size]
 		batchedLabel=y_test[iter*model.batch_size:(iter+1)*model.batch_size]        
-		batchedProbs,_=model.loss_function(batchedInput)
-		batchedLoss=model.loss(batchedProbs,batchedLabel)
+		probs = model.call(batchedInput)
+		batchedLoss=model.loss_function(probs,batchedLabel)
 		loss+=batchedLoss
-		perplexity=tf.math.exp(loss/iteration)
-		return perplexity
-
+	perplexity=tf.math.exp(loss/iteration)
+	return perplexity
 
 
 def main():
@@ -150,13 +152,17 @@ def main():
 	test_token = tokenizer.texts_to_sequences(X_test.values)
 	test_token = pad_sequences(test_token)
 	# print(tokenizer.sequences_to_texts([X_token[0]]))
+
 	window_size=20
 	model=LSTM_Seq2Dis(window_size,len(X_token))
 	train(model,X_token,y_train)
 	perplexity=test(model,test_token,y_test)
 	prbs=model.call(test_token)
 	acc=model.accuracy_function(prbs,y_test)
-	pass
+	print("Perplexity:", perplexity)
+	print("Accuracy:", acc)
+
+	
 
 
 	
