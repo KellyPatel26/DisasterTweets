@@ -24,9 +24,9 @@ class LSTM_Seq2Dis(tf.keras.Model):
 		# 1) Define any hyperparameters
 
 		# Define batch size and optimizer/learning rate
-		self.batch_size = 50 
-		self.embedding_size = 50 
-		self.learning_rate=5e-3
+		self.batch_size = 100 
+		self.embedding_size = 300 
+		self.learning_rate=0.01
 		self.RNN=self.embedding_size
 		self.dropRate=0.5
 
@@ -38,9 +38,9 @@ class LSTM_Seq2Dis(tf.keras.Model):
 		self.lstmdis=tf.keras.layers.LSTM(self.RNN,return_sequences=True,return_state=True,recurrent_dropout=0.3)
 		self.drop=tf.keras.layers.Dropout(self.dropRate)
 		# first type of dense
-		self.denseTypeOne=tf.keras.layers.Dense(self.embedding_size,activation='relu')
+		self.denseTypeOne=tf.keras.layers.Dense(self.embedding_size,activation='linear')
 		# second type of dense
-		self.denseTypeTwo=tf.keras.layers.Dense(1,activation='sigmoid')
+		self.denseTypeTwo=tf.keras.layers.Dense(2,activation='softmax')
 		# max pooling
 		self.maxpool=tf.keras.layers.MaxPool1D()
 		self.optimizer=tf.keras.optimizers.Adam(self.learning_rate)
@@ -51,17 +51,12 @@ class LSTM_Seq2Dis(tf.keras.Model):
 		
 		embededSentence=tf.nn.embedding_lookup(self.embeddingVocab,batched_input)
 		sentence_output, final_memory_state,final_carry_state=self.lstmdis(embededSentence,None)
-		# poolingRe=self.maxpool(sentence_output)
-		# print('sentence_output.shape',sentence_output.shape)
-		denseOne=self.denseTypeOne(sentence_output)
-		# print('denseOne.shape',denseOne.shape)
-		# dropOne=self.drop(denseOne,training=True)
-		denseTwo=self.denseTypeOne(denseOne)
-		# print('denseTwo.shape',denseTwo.shape)
-		# dropTwo=self.drop(denseTwo,training=True)
-		prbs=self.denseTypeTwo(denseTwo)
-		prbs = tf.keras.layers.Flatten()(prbs)
-		# print('prbs.shape',prbs.shape)		
+		denseOne=self.denseTypeOne(tf.concat([final_memory_state,final_carry_state],1))
+		# denseTwo=self.denseTypeOne(denseOne)
+		prbs=self.denseTypeTwo(denseOne)
+
+		
+		# prbs = tf.keras.layers.Flatten()(prbs)		
 		return prbs
 
 	def accuracy_function(self, prbs, labels):
@@ -74,7 +69,6 @@ class LSTM_Seq2Dis(tf.keras.Model):
 		:param mask:  tensor that acts as a padding mask [batch_size x window_size]
 		:return: scalar tensor of accuracy of the batch between 0 and 1
 		"""
-		print(tf.shape(prbs), tf.shape(labels))
 		decoded_symbols = tf.argmax(input=prbs, axis=1)
 		accuracy = tf.reduce_mean(tf.cast(tf.equal(decoded_symbols, labels), dtype=tf.float32))
 		return accuracy
@@ -90,10 +84,7 @@ class LSTM_Seq2Dis(tf.keras.Model):
 		:param mask:  tensor that acts as a padding mask [batch_size x window_size]
 		:return: the loss of the model as a tensor
 		"""
-		# print('prbs.shape',prbs.shape)
 		lossTensor=tf.keras.losses.sparse_categorical_crossentropy(labels,prbs)
-		# print(lossTensor)
-		# print('lossTensor.shape',tf.shape(lossTensor))
 		loss=tf.math.reduce_sum(lossTensor) 	
 
 
@@ -105,7 +96,6 @@ class LSTM_Seq2Dis(tf.keras.Model):
 def train(model, X_token, y_train):
 	
 	iteration=int(tf.math.floor(len(y_train)/model.batch_size))
-	# inputMod=len(train_french)%model.batch_size
 	losses = []
 	for iter in range(iteration):		
 		batchedInput=X_token[iter*model.batch_size:(iter+1)*model.batch_size]
@@ -115,7 +105,6 @@ def train(model, X_token, y_train):
 			batchedProbs=model.call(batchedInput)
 			loss=model.loss_function(batchedProbs,batchedLabel)
 			losses.append(loss)
-			print('The model is calculating the loss', loss)
 		Grad=tape.gradient(loss,model.trainable_variables)
 		model.optimizer.apply_gradients(zip(Grad,model.trainable_variables))
 	return losses
@@ -123,8 +112,6 @@ def train(model, X_token, y_train):
 
 
 def test(model, test_token, y_test):
-	
-	# Note: Follow the same procedure as in train() to construct batches of data!
 	iteration=int(tf.math.floor(len(y_test)/model.batch_size))
 	loss=0
 	for iter in range(iteration):
@@ -157,6 +144,7 @@ def main():
 	# print(tokenizer.sequences_to_texts([X_token[0]]))
 	window_size=20
 	model=LSTM_Seq2Dis(window_size,len(X_token))
+	
 	train_losses = train(model,X_token,y_train)
 	train_iters = np.arange(len(train_losses))
 
