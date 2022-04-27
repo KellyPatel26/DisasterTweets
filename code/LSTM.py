@@ -113,15 +113,14 @@ def train(model, X_token, y_train):
 
 def test(model, test_token, y_test):
 	iteration=int(tf.math.floor(len(y_test)/model.batch_size))
-	loss=0
+	losses=[]
 	for iter in range(iteration):
 		batchedInput=test_token[iter*model.batch_size:(iter+1)*model.batch_size]
 		batchedLabel=y_test[iter*model.batch_size:(iter+1)*model.batch_size]        
 		probs = model.call(batchedInput)
-		batchedLoss=model.loss_function(probs,batchedLabel)
-		loss+=batchedLoss
-	perplexity=tf.math.exp(loss/iteration)
-	return perplexity
+		loss=model.loss_function(probs,batchedLabel)
+		losses.append(loss)
+	return losses
 
 
 def main():
@@ -148,15 +147,21 @@ def main():
 	train_losses = train(model,X_token,y_train)
 	train_iters = np.arange(len(train_losses))
 
-	perplexity=test(model,test_token,y_test)
-	prbs=model.call(test_token)
-	acc=model.accuracy_function(prbs,y_test)
-	print("Perplexity:", perplexity)
-	print("Accuracy:", acc)
+	test_losses=test(model,test_token,y_test)
+	test_iters=np.arange(len(test_losses))
+
+	test_prbs=model.call(test_token)
+	test_acc=model.accuracy_function(test_prbs,y_test)
+	print("Testing Accuracy:", test_acc)
+
+	train_prbs=model.call(X_token)
+	train_acc=model.accuracy_function(train_prbs,y_train)
+	print("Training Accuracy:", train_acc)
 
 
  
 	# plotting the points
+	plt.figure(0)
 	plt.plot(train_iters, train_losses)
 	
 	# naming the x axis
@@ -166,6 +171,20 @@ def main():
 	
 	# giving a title to my graph
 	plt.title('Training Loss')
+	
+	# function to show the plot
+	plt.show()
+
+	plt.figure(1)
+	plt.plot(test_iters, test_losses)
+	
+	# naming the x axis
+	plt.xlabel('Iterations')
+	# naming the y axis
+	plt.ylabel('Testing Loss')
+	
+	# giving a title to my graph
+	plt.title('Testing Loss')
 	
 	# function to show the plot
 	plt.show()
