@@ -2,6 +2,7 @@ from lib2to3.pgen2 import token
 from preprocess import *
 import tensorflow as tf
 import transformers
+import matplotlib.pyplot as plt
 
 #######################
 # Some useful variables
@@ -91,14 +92,31 @@ if __name__ == '__main__':
       metrics=['accuracy'])
 
     # Training the model
-    model.fit(train_input,train_label,batch_size=BATCH_SIZE)
-
+    print("BEFORE")
+    history = model.fit(train_input,train_label,batch_size=BATCH_SIZE, epochs = 20, verbose = 0, validation_split = 0.2)
+    print("AFTER")
+    train_loss, train_acc = model.evaluate(train_input, train_label)
     # Testing the model
     test_loss, test_acc = model.evaluate(test_input,test_label)
-
+    print('\Train accuracy: {}'.format(train_acc))
     print('\nTest accuracy: {}'.format(test_acc))
+    print("Acc:", history.history['accuracy'])
+
+    # summarize history for accuracy
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'validation'], loc='upper left')
+    plt.show()
+    # summarize history for loss
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'validation'], loc='upper left')
+    plt.show()
     
-    
-    
-    
-    # If you need tokenization, see how I did it in LSTM.py!
+  

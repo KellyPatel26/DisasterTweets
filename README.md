@@ -24,3 +24,17 @@ Processed data looks like this:
 - Y_test (1636,) of testing labels (either 0, not disaster or 1, disaster)
 
 For LSTM Model, I also tokenized the inputs in the main function if you decide you need them.
+
+## LSTM MODEL
+
+## BERT MODEL
+
+## RESULTS
+On an NVIDIA GeForce RTX 2070 GPU, the LSTM model takes about 45 seconds to run. The BERT model takes about 7 minutes to run.
+
+The LSTM model achieves a testing accuracy of about 75%.
+It achieves a training accuracy of __%.
+
+The BERT model achieves a testing accuracy of about 82%.
+It achieves a training accuracy of 80%.
+
