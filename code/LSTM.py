@@ -26,7 +26,7 @@ class LSTM_Seq2Dis(tf.keras.Model):
 		# Define batch size and optimizer/learning rate
 		self.batch_size = 100 
 		self.embedding_size = 300 
-		self.learning_rate=0.01
+		self.learning_rate=0.001
 		self.RNN=self.embedding_size
 		self.dropRate=0.5
 
@@ -95,7 +95,8 @@ class LSTM_Seq2Dis(tf.keras.Model):
 
 def train(model, X_token, y_train):
 	
-	iteration=int(tf.math.floor(len(y_train)/model.batch_size))
+	# iteration=int(tf.math.floor(len(y_train)/model.batch_size))
+	iteration = 100
 	losses = []
 	for iter in range(iteration):		
 		batchedInput=X_token[iter*model.batch_size:(iter+1)*model.batch_size]
@@ -112,7 +113,7 @@ def train(model, X_token, y_train):
 
 
 def test(model, test_token, y_test):
-	iteration=int(tf.math.floor(len(y_test)/model.batch_size))
+	iteration=50
 	losses=[]
 	for iter in range(iteration):
 		batchedInput=test_token[iter*model.batch_size:(iter+1)*model.batch_size]
